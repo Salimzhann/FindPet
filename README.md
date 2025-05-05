@@ -1,216 +1,106 @@
-SDUPM is a comprehensive iOS application designed to help reunite lost pets with their owners. The app provides a platform for pet owners to register their lost pets, while also allowing people who find lost pets to post information about them. Through advanced image recognition and matching algorithms, the app helps identify potential matches between lost and found pets.
-Key Features
+Pet Reunion: Lost & Found Pet Matching App
+Project Overview
+Pet Reunion is a mobile application designed to help reunite lost pets with their owners. Using advanced image recognition technology and location-based services, the app allows users to report lost pets, search for found pets that match their criteria, and communicate directly with other users through an integrated chat system.
+This app addresses a critical problem for pet owners: according to the American Humane Association, approximately 10 million pets are lost in the United States each year. Pet Reunion aims to significantly improve the chances of reuniting owners with their lost companions.
+Features
 
-Lost & Found Pet Registry: Register lost pets or report found pets with detailed information
-AI-Powered Pet Matching: Advanced image recognition to match lost and found pets
-Real-time Chat: Direct communication between pet owners and finders
-User Profiles: Manage your pet information and account details
-Location Services: See pets lost or found in your vicinity
-Search Functionality: Find pets by species, breed, color, and more
+Lost & Found Pet Listings: View and manage listings of both lost and found pets
+Image Recognition Search: Find potential matches for lost/found pets using photo similarity
+Real-time Chat: Communicate directly with other users about potential matches
+User Profiles: Manage your account and preferences
+Pet Management: Add and manage information about your pets
+Location-based Services: Find pets near your location
+Verification System: Email verification to ensure legitimate users
 
-📋 Project Structure
-The project follows a modular structure for better organization and maintainability:
-SDUPM/
-├── Modules/
-│   ├── Chat/               - Chat functionality between users
-│   ├── FindPet/            - Search and match pet functionality
-│   ├── Main/               - Main application screens
-│   ├── MyPets/             - User's pet management
-│   ├── Profile/            - User profile management
-│   ├── RegistrationViews/  - Authentication & registration
-│   └── TapBarNavigation/   - Navigation structure
-├── NetworkService/         - API communication layer
-└── Resources/              - Assets and resources
-🚀 Getting Started
+Technology Stack
+
+Frontend: Swift for iOS native app development
+Architecture: Model-View-Presenter (MVP) pattern
+Networking: RESTful API for most operations, WebSockets for real-time messaging
+UI Framework: UIKit with SnapKit for programmatic layout
+Dependencies:
+
+SnapKit for layout constraints
+URLSession for networking
+WebSockets for real-time messaging
+
+
+
+Getting Started
 Prerequisites
 
-iOS 14.0+
-Xcode 13.0+
+macOS (latest stable version recommended)
+Xcode 14.0 or later
+iOS 15.0+ target deployment
 Swift 5.5+
-CocoaPods (for dependency management)
+CocoaPods for dependency management
 
 Installation
 
 Clone the repository
-bashgit clone https://github.com/Salimzhann/SDUPM.git
+
+bashgit clone https://github.com/yourusername/pet-reunion.git
+cd pet-reunion
 
 Install dependencies
-bashcd SDUPM
-pod install
 
-Open the workspace file
+bashpod install
+
+Open the workspace
+
 bashopen SDUPM.xcworkspace
 
-Build and run the project in Xcode
+Configure the API endpoint in NetworkService.swift if needed
 
-🧠 Technical Implementation
-Architecture
-The app follows the MVP (Model-View-Presenter) architectural pattern, providing a clean separation of concerns:
+swiftstatic let api: String = "https://your-api-endpoint.com"
 
-Model: Data structures and business logic
-View: UI components and layouts
-Presenter: Mediates between Model and View, handling user interactions
+Build and run the application in Xcode
 
-Key Components
+Project Structure
+The project follows the MVP (Model-View-Presenter) architecture and is organized into the following modules:
+SDUPM/
+├── Modules/
+│   ├── Chat/                # Real-time messaging functionality
+│   ├── FindPet/             # Pet search and matching features
+│   ├── Main/                # Main interface and navigation
+│   ├── MyPets/              # Pet management functionality
+│   ├── Profile/             # User profile management
+│   ├── RegistrationViews/   # Authentication and registration
+│   └── TapBarNavigation/    # Tab bar controller setup
+├── NetworkService/          # API communication and models
+└── Resources/               # App resources (images, etc.)
+Documentation
+Detailed documentation is available in the docs/ directory:
 
-NetworkServiceProvider: Handles all API communication
-ChatPresenter/ChatViewController: Manages real-time chat functionality
-FindPetPresenter/FindPetViewController: Handles pet search and matching
-ProfilePresenter/ProfileView: Manages user profile information
-Authentication: Secure login, registration, and email verification
+API Documentation: Detailed information about the backend API endpoints
+Architecture Guide: Overview of the application architecture
+Development Guide: Guidelines for developers contributing to the project
+User Guide: End-user documentation
 
-Technologies Used
-
-UIKit: For native iOS UI components
-SnapKit: For programmatic Auto Layout constraints
-WebSockets: For real-time chat communication
-URLSession: For API communication
-CoreLocation: For location-based services
-AVFoundation: For camera integration
-
-📊 Data Models
-The app uses several key data models:
-
-Pet: Contains pet details including species, breed, photos, and status
-Chat: Manages conversation data between users
-User: User profile and authentication information
-PetMatch: Links between potentially matching pets with similarity scores
-
-🔄 API Integration
-The app communicates with a RESTful backend API for data persistence and retrieval:
-
-Authentication API: User registration, login, and verification
-Pets API: Create, read, update, and delete pet information
-Chat API: Message management and WebSocket connections
-Search API: Pet matching and search functionality
-
-📃 Documentation
-Detailed documentation is available in the /docs directory, including:
-
-API documentation
-Architecture overview
-User flows
-Development guidelines
-
-✅ Testing
-The project includes unit tests for key functionality. Run the tests in Xcode using Cmd+U.
-🤝 Contributing
+Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 Fork the repository
-Create your feature branch (git checkout -b feature/amazing-feature)
+Create a feature branch (git checkout -b feature/amazing-feature)
 Commit your changes (git commit -m 'Add some amazing feature')
 Push to the branch (git push origin feature/amazing-feature)
 Open a Pull Request
 
-# SDUPM Source Code
-
-## Overview
-
-This directory contains the source code for the SDUPM iOS application. The code is organized into modules to maintain clean separation of concerns and improve maintainability.
-
-## Structure
-
-```
-src/
-├── SDUPM/
-│   ├── Modules/
-│   │   ├── Chat/                  - Real-time messaging functionality
-│   │   ├── FindPet/               - Pet search and matching
-│   │   ├── Main/                  - Main app screens and navigation
-│   │   ├── MyPets/                - User's pet management
-│   │   ├── Profile/               - User profile and settings
-│   │   ├── RegistrationViews/     - Authentication flows
-│   │   └── TapBarNavigation/      - Tab-based navigation
-│   │
-│   ├── NetworkService/            - API communication layer
-│   │   ├── Models/                - Data models for network responses
-│   │   └── Services/              - Network service implementations
-│   │
-│   ├── Common/                    - Shared utilities and extensions
-│   │   ├── Extensions/            - Swift extensions
-│   │   ├── Protocols/             - Common protocols
-│   │   └── Utilities/             - Helper classes
-│   │
-│   ├── Resources/                 - App resources
-│   │   ├── Assets.xcassets/       - Image assets
-│   │   ├── Fonts/                 - Custom fonts
-│   │   └── Localization/          - Localized strings
-│   │
-│   └── Application/               - App setup code
-│       ├── AppDelegate.swift
-│       ├── SceneDelegate.swift
-│       └── AppConfiguration.swift
-│
-└── SDUPMTests/                     - Test cases
-    ├── ModuleTests/                - Tests for each module
-    ├── NetworkTests/               - API and network tests
-    └── IntegrationTests/           - End-to-end tests
-```
-
-## Module Architecture
-
-Each module follows the MVP (Model-View-Presenter) pattern:
-
-- **Models**: Data structures and business logic
-- **Views**: UI components and controllers
-- **Presenters**: Coordinate between models and views
-
-### Example: Chat Module
-
-```
-Chat/
-├── ChatListPresenter.swift         - Presenter for list of chats
-├── ChatListViewController.swift    - View controller for chat list
-├── ChatPresenter.swift             - Presenter for individual chat
-├── ChatViewController.swift        - View controller for chat screen
-├── ChatModels.swift                - Data models for chat
-├── MessageCells.swift              - Custom cells for messages
-└── CreateChatViewController.swift  - View for creating new chats
-```
-
-## Dependencies
-
-The project uses several key dependencies:
-
-- **SnapKit**: For programmatic Auto Layout constraints
-- **URLSession**: For networking operations
-- **WebSocket**: For real-time chat functionality
-- **CoreLocation**: For location services
-
-## Getting Started
-
-1. Clone the repository
-2. Install CocoaPods dependencies with `pod install`
-3. Open `SDUPM.xcworkspace` in Xcode
-4. Build and run the project
-
-## Coding Guidelines
-
-- Use Swift's native capabilities where possible
-- Follow the MVP architectural pattern
-- Maintain separation of concerns
-- Write self-documenting code with clear naming
-- Add comments for complex logic
-- Follow Swift style guidelines
-
-## Adding New Features
-
-When adding new features:
-
-1. Create a new module if needed
-2. Implement the Model, View, and Presenter components
-3. Connect with the NetworkService layer if required
-4. Add unit tests for the new functionality
-5. Update documentation
-
-## Contribution
-
-Please see the root-level README.md for contribution guidelines.
-
-📝 License
+Please make sure your code follows the project's coding standards and includes appropriate tests.
+License
 This project is licensed under the MIT License - see the LICENSE file for details.
-📞 Contact
-Project Maintainer - manassalimzhan04@gmail.com
+Contact
+If you have any questions or feedback, please open an issue on GitHub or contact the project maintainers.
 
-Made with ❤️ by the Manas Salimzhan
+Repository Structure:
+pet-reunion/
+├── README.md            # Project overview (this file)
+├── docs/                # Detailed documentation
+│   ├── API_DOCUMENTATION.md
+│   ├── ARCHITECTURE.md
+│   ├── DEVELOPMENT_GUIDE.md
+│   └── USER_GUIDE.md
+├── src/                 # Source code (contents of SDUPM/)
+├── data/                # Sample data (if applicable)
+├── tests/               # Test cases
+└── LICENSE              # MIT License
