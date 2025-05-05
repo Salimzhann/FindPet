@@ -103,6 +103,111 @@ Commit your changes (git commit -m 'Add some amazing feature')
 Push to the branch (git push origin feature/amazing-feature)
 Open a Pull Request
 
+# SDUPM Source Code
+
+## Overview
+
+This directory contains the source code for the SDUPM iOS application. The code is organized into modules to maintain clean separation of concerns and improve maintainability.
+
+## Structure
+
+```
+src/
+├── SDUPM/
+│   ├── Modules/
+│   │   ├── Chat/                  - Real-time messaging functionality
+│   │   ├── FindPet/               - Pet search and matching
+│   │   ├── Main/                  - Main app screens and navigation
+│   │   ├── MyPets/                - User's pet management
+│   │   ├── Profile/               - User profile and settings
+│   │   ├── RegistrationViews/     - Authentication flows
+│   │   └── TapBarNavigation/      - Tab-based navigation
+│   │
+│   ├── NetworkService/            - API communication layer
+│   │   ├── Models/                - Data models for network responses
+│   │   └── Services/              - Network service implementations
+│   │
+│   ├── Common/                    - Shared utilities and extensions
+│   │   ├── Extensions/            - Swift extensions
+│   │   ├── Protocols/             - Common protocols
+│   │   └── Utilities/             - Helper classes
+│   │
+│   ├── Resources/                 - App resources
+│   │   ├── Assets.xcassets/       - Image assets
+│   │   ├── Fonts/                 - Custom fonts
+│   │   └── Localization/          - Localized strings
+│   │
+│   └── Application/               - App setup code
+│       ├── AppDelegate.swift
+│       ├── SceneDelegate.swift
+│       └── AppConfiguration.swift
+│
+└── SDUPMTests/                     - Test cases
+    ├── ModuleTests/                - Tests for each module
+    ├── NetworkTests/               - API and network tests
+    └── IntegrationTests/           - End-to-end tests
+```
+
+## Module Architecture
+
+Each module follows the MVP (Model-View-Presenter) pattern:
+
+- **Models**: Data structures and business logic
+- **Views**: UI components and controllers
+- **Presenters**: Coordinate between models and views
+
+### Example: Chat Module
+
+```
+Chat/
+├── ChatListPresenter.swift         - Presenter for list of chats
+├── ChatListViewController.swift    - View controller for chat list
+├── ChatPresenter.swift             - Presenter for individual chat
+├── ChatViewController.swift        - View controller for chat screen
+├── ChatModels.swift                - Data models for chat
+├── MessageCells.swift              - Custom cells for messages
+└── CreateChatViewController.swift  - View for creating new chats
+```
+
+## Dependencies
+
+The project uses several key dependencies:
+
+- **SnapKit**: For programmatic Auto Layout constraints
+- **URLSession**: For networking operations
+- **WebSocket**: For real-time chat functionality
+- **CoreLocation**: For location services
+
+## Getting Started
+
+1. Clone the repository
+2. Install CocoaPods dependencies with `pod install`
+3. Open `SDUPM.xcworkspace` in Xcode
+4. Build and run the project
+
+## Coding Guidelines
+
+- Use Swift's native capabilities where possible
+- Follow the MVP architectural pattern
+- Maintain separation of concerns
+- Write self-documenting code with clear naming
+- Add comments for complex logic
+- Follow Swift style guidelines
+
+## Adding New Features
+
+When adding new features:
+
+1. Create a new module if needed
+2. Implement the Model, View, and Presenter components
+3. Connect with the NetworkService layer if required
+4. Add unit tests for the new functionality
+5. Update documentation
+
+## Contribution
+
+Please see the root-level README.md for contribution guidelines.
+
 📝 License
 This project is licensed under the MIT License - see the LICENSE file for details.
 📞 Contact
