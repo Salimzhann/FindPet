@@ -1,0 +1,272 @@
+// FindPEtPresenter example of unit test
+
+
+import XCTest
+import CoreLocation
+@testable import SDUPM
+
+class FindPetPresenterTests: XCTestCase {
+    
+    var presenter: FindPetSearchPresenter!
+    var mockView: MockFindPetView!
+    var mockNetworkProvider: MockNetworkServiceProvider!
+    var testImage: UIImage!
+    
+    override func setUp() {
+        super.setUp()
+        mockView = MockFindPetView()
+        mockNetworkProvider = MockNetworkServiceProvider()
+        presenter = FindPetSearchPresenter()
+        presenter.view = mockView
+        
+        // Create a test image
+        let rect = CGRect(x: 0, y: 0, width: 100, height: 100)
+        UIGraphicsBeginImageContext(rect.size)
+        let context = UIGraphicsGetCurrentContext()
+        context?.setFillColor(UIColor.red.cgColor)
+        context?.fill(rect)
+        testImage = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+    }
+    
+    override func tearDown() {
+        presenter = nil
+        mockView = nil
+        mockNetworkProvider = nil
+        testImage = nil
+        super.tearDown()
+    }
+    
+    // MARK: - Tests
+    
+    func test_searchPet_withoutSaving_success() {
+        // Given
+        let mockResponse = PetSearchResponse(
+            matches: [
+                PetMatch(
+                    pet: Pet(
+                        id: 1,
+                        name: "Max",
+                        species: "dog",
+                        breed: "Labrador",
+                        age: 3,
+                        color: "golden",
+                        gender: "male",
+                        distinctive_features: "White spot on chest",
+                        last_seen_location: nil,
+                        photos: [],
+                        status: "lost",
+                        created_at: "2023-11-01T12:00:00.000000",
+                        updated_at: "2023-11-01T12:00:00.000000",
+                        lost_date: nil,
+                        owner_id: 1,
+                        owner_phone: nil
+                    ),
+                    similarity_score: 0.85
+                )
+            ]
+        )
+        
+        mockNetworkProvider.mockSearchPetResult = .success(mockResponse)
+        
+        // When
+        presenter.searchPet(
+            photo: testImage,
+            species: "dog",
+            color: "golden",
+            gender: "male",
+            breed: "Labrador",
+            coordX: nil,
+            coordY: nil,
+            save: false
+        )
+        
+        // Then
+        XCTAssertTrue(mockView.showLoadingCalled)
+        XCTAssertTrue(mockView.hideLoadingCalled)
+        XCTAssertFalse(mockView.showErrorCalled)
+        XCTAssertTrue(mockView.navigateToSearchResultsCalled)
+        XCTAssertEqual(mockView.searchResponse?.matches.count, 1)
+        XCTAssertEqual(mockView.searchResponse?.matches[0].pet.name, "Max")
+        XCTAssertEqual(mockView.searchResponse?.matches[0].similarity_score, 0.85)
+    }
+    
+    func test_searchPet_withSaving_success() {
+        // Given
+        let mockResponse = PetSearchResponse(
+            matches: [
+                PetMatch(
+                    pet: Pet(
+                        id: 1,
+                        name: "Max",
+                        species: "dog",
+                        breed: "Labrador",
+                        age: 3,
+                        color: "golden",
+                        gender: "male",
+                        distinctive_features: "White spot on chest",
+                        last_seen_location: nil,
+                        photos: [],
+                        status: "lost",
+                        created_at: "2023-11-01T12:00:00.000000",
+                        updated_at: "2023-11-01T12:00:00.000000",
+                        lost_date: nil,
+                        owner_id: 1,
+                        owner_phone: nil
+                    ),
+                    similarity_score: 0.85
+                )
+            ]
+        )
+        
+        mockNetworkProvider.mockSearchPetResult = .success(mockResponse)
+        
+        // When
+        let coordinates = CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060)
+        presenter.searchPet(
+            photo: testImage,
+            species: "dog",
+            color: "golden",
+            gender: "male",
+            breed: "Labrador",
+            coordX: coordinates.latitude,
+            coordY: coordinates.longitude,
+            save: true
+        )
+        
+        // Then
+        XCTAssertTrue(mockView.showLoadingCalled)
+        XCTAssertTrue(mockView.hideLoadingCalled)
+        XCTAssertFalse(mockView.showErrorCalled)
+        XCTAssertTrue(mockView.navigateToSearchResultsCalled)
+        XCTAssertEqual(mockView.searchResponse?.matches.count, 1)
+        XCTAssertEqual(mockView.searchResponse?.matches[0].pet.name, "Max")
+    }
+    
+    func test_searchPet_failure() {
+        // Given
+        let mockError = NetworkError.networkUnavailable
+        mockNetworkProvider.mockSearchPetResult = .failure(mockError)
+        
+        // When
+        presenter.searchPet(
+            photo: testImage,
+            species: "dog",
+            color: "golden",
+            gender: nil,
+            breed: nil,
+            coordX: nil,
+            coordY: nil,
+            save: false
+        )
+        
+        // Then
+        XCTAssertTrue(mockView.showLoadingCalled)
+        XCTAssertTrue(mockView.hideLoadingCalled)
+        XCTAssertTrue(mockView.showErrorCalled)
+        XCTAssertFalse(mockView.navigateToSearchResultsCalled)
+        XCTAssertEqual(mockView.errorMessage, "Search failed: \(mockError.localizedDescription)")
+    }
+    
+    func test_reportFoundPet_success() {
+        // Given
+        let mockResponse = PetSearchResponse(matches: [])
+        mockNetworkProvider.mockSearchPetResult = .success(mockResponse)
+        
+        // When
+        let coordinates = CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060)
+        presenter.reportFoundPet(
+            photo: testImage,
+            species: "dog",
+            color: "brown",
+            gender: "male",
+            breed: "Mixed",
+            location: coordinates
+        )
+        
+        // Then
+        XCTAssertTrue(mockView.showLoadingCalled)
+        XCTAssertTrue(mockView.hideLoadingCalled)
+        XCTAssertFalse(mockView.showErrorCalled)
+        XCTAssertTrue(mockView.navigateToSearchResultsCalled)
+    }
+    
+    func test_reportFoundPet_failure() {
+        // Given
+        let mockError = NetworkError.serverError("Internal server error")
+        mockNetworkProvider.mockSearchPetResult = .failure(mockError)
+        
+        // When
+        presenter.reportFoundPet(
+            photo: testImage,
+            species: "cat",
+            color: "black",
+            gender: "female",
+            breed: nil,
+            location: nil
+        )
+        
+        // Then
+        XCTAssertTrue(mockView.showLoadingCalled)
+        XCTAssertTrue(mockView.hideLoadingCalled)
+        XCTAssertTrue(mockView.showErrorCalled)
+        XCTAssertFalse(mockView.navigateToSearchResultsCalled)
+        XCTAssertEqual(mockView.errorMessage, "Failed to add pet: \(mockError.localizedDescription)")
+    }
+    
+    // MARK: - Mock Classes
+    
+    class MockFindPetView: IFindPetView {
+        var showLoadingCalled = false
+        var hideLoadingCalled = false
+        var showErrorCalled = false
+        var showSuccessCalled = false
+        var navigateToSearchResultsCalled = false
+        var errorMessage: String?
+        var successMessage: String?
+        var searchResponse: PetSearchResponse?
+        
+        func showLoading() {
+            showLoadingCalled = true
+        }
+        
+        func hideLoading() {
+            hideLoadingCalled = true
+        }
+        
+        func navigateToSearchResults(response: PetSearchResponse) {
+            navigateToSearchResultsCalled = true
+            searchResponse = response
+        }
+        
+        func showError(message: String) {
+            showErrorCalled = true
+            errorMessage = message
+        }
+        
+        func showSuccess(message: String) {
+            showSuccessCalled = true
+            successMessage = message
+        }
+    }
+    
+    class MockNetworkServiceProvider: NetworkServiceProvider {
+        var mockSearchPetResult: Result<PetSearchResponse, Error>?
+        
+        override func searchPet(
+            photo: UIImage,
+            species: String,
+            color: String,
+            gender: String?,
+            breed: String?,
+            coordX: Double?,
+            coordY: Double?,
+            save: Bool,
+            completion: @escaping (Result<PetSearchResponse, Error>) -> Void
+        ) {
+            if let result = mockSearchPetResult {
+                completion(result)
+            }
+        }
+    }
+}
