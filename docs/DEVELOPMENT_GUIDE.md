@@ -13,7 +13,7 @@
 1. **Clone the Repository**
    ```bash
    git clone https://github.com/Salimzhann/FindPetApp_13P.git
-   cd pet-reunion
+   cd FindPetApp_13P
 
 Install Dependencies
 bashpod install
