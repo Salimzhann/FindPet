@@ -1,0 +1,148 @@
+// Sample pet json
+
+[
+  {
+    "id": 1,
+    "name": "Max",
+    "species": "dog",
+    "breed": "Labrador Retriever",
+    "age": 3,
+    "color": "golden",
+    "gender": "male",
+    "distinctive_features": "White spot on chest, small scar on left ear",
+    "last_seen_location": "Central Park, near the lake",
+    "photos": [
+      {
+        "id": 1,
+        "pet_id": 1,
+        "photo_url": "https://example.com/pets/max1.jpg",
+        "is_primary": true,
+        "created_at": "2023-11-01T14:30:45.000000"
+      },
+      {
+        "id": 2,
+        "pet_id": 1,
+        "photo_url": "https://example.com/pets/max2.jpg",
+        "is_primary": false,
+        "created_at": "2023-11-01T14:31:22.000000"
+      }
+    ],
+    "status": "lost",
+    "created_at": "2023-11-01T14:30:45.000000",
+    "updated_at": "2023-11-01T14:31:22.000000",
+    "lost_date": "2023-11-01T08:15:00.000000",
+    "owner_id": 1,
+    "owner_phone": "+12125551234"
+  },
+  {
+    "id": 2,
+    "name": "Luna",
+    "species": "cat",
+    "breed": "Maine Coon",
+    "age": 2,
+    "color": "black",
+    "gender": "female",
+    "distinctive_features": "Fluffy tail, gold eyes, white paws",
+    "last_seen_location": "Riverside Drive and W 82nd St",
+    "photos": [
+      {
+        "id": 3,
+        "pet_id": 2,
+        "photo_url": "https://example.com/pets/luna1.jpg",
+        "is_primary": true,
+        "created_at": "2023-11-02T08:15:33.000000"
+      }
+    ],
+    "status": "lost",
+    "created_at": "2023-11-02T08:15:33.000000",
+    "updated_at": "2023-11-02T08:15:33.000000",
+    "lost_date": "2023-11-01T22:45:00.000000",
+    "owner_id": 2,
+    "owner_phone": "+12125559876"
+  },
+  {
+    "id": 3,
+    "name": "Buddy",
+    "species": "dog",
+    "breed": "Golden Retriever",
+    "age": 4,
+    "color": "golden",
+    "gender": "male",
+    "distinctive_features": "Red collar with silver tag, very friendly",
+    "last_seen_location": null,
+    "photos": [
+      {
+        "id": 4,
+        "pet_id": 3,
+        "photo_url": "https://example.com/pets/buddy1.jpg",
+        "is_primary": true,
+        "created_at": "2023-11-03T15:45:12.000000"
+      },
+      {
+        "id": 5,
+        "pet_id": 3,
+        "photo_url": "https://example.com/pets/buddy2.jpg",
+        "is_primary": false,
+        "created_at": "2023-11-03T15:46:08.000000"
+      }
+    ],
+    "status": "found",
+    "created_at": "2023-11-03T15:45:12.000000",
+    "updated_at": "2023-11-03T15:46:08.000000",
+    "lost_date": null,
+    "owner_id": 3,
+    "owner_phone": null
+  },
+  {
+    "id": 4,
+    "name": "Oliver",
+    "species": "cat",
+    "breed": "Tabby",
+    "age": 1,
+    "color": "gray striped",
+    "gender": "male",
+    "distinctive_features": "Blue collar with bell, white chest and paws",
+    "last_seen_location": "Washington Square Park",
+    "photos": [
+      {
+        "id": 6,
+        "pet_id": 4,
+        "photo_url": "https://example.com/pets/oliver1.jpg",
+        "is_primary": true,
+        "created_at": "2023-11-05T09:22:18.000000"
+      }
+    ],
+    "status": "lost",
+    "created_at": "2023-11-05T09:22:18.000000",
+    "updated_at": "2023-11-05T09:22:18.000000",
+    "lost_date": "2023-11-04T18:30:00.000000",
+    "owner_id": 4,
+    "owner_phone": "+12125554321"
+  },
+  {
+    "id": 5,
+    "name": "Unknown",
+    "species": "dog",
+    "breed": "Beagle",
+    "age": null,
+    "color": "tri-color",
+    "gender": "male",
+    "distinctive_features": "No collar, limping slightly on front right paw",
+    "last_seen_location": "Bryant Park",
+    "photos": [
+      {
+        "id": 7,
+        "pet_id": 5,
+        "photo_url": "https://example.com/pets/unknown1.jpg",
+        "is_primary": true,
+        "created_at": "2023-11-06T16:10:55.000000"
+      }
+    ],
+    "status": "found",
+    "created_at": "2023-11-06T16:10:55.000000",
+    "updated_at": "2023-11-06T16:10:55.000000",
+    "lost_date": null,
+    "owner_id": 5,
+    "owner_phone": null
+  }
+]
