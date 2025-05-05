@@ -1,0 +1,1129 @@
+src/NetworkService/NetworkService.swift (Sample)
+swiftimport Foundation
+import UIKit
+
+/// Errors that can occur during network operations
+enum NetworkError: Error, LocalizedError {
+    case invalidURL
+    case requestFailed(statusCode: Int)
+    case noData
+    case decodingFailed(Error)
+    case networkUnavailable
+    case authenticationRequired
+    case serverError(String)
+    case unknownError(Error)
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid URL"
+        case .requestFailed(let statusCode):
+            return "Request failed with status code: \(statusCode)"
+        case .noData:
+            return "No data received from server"
+        case .decodingFailed(let error):
+            return "Failed to decode response: \(error.localizedDescription)"
+        case .networkUnavailable:
+            return "Network connection appears to be offline"
+        case .authenticationRequired:
+            return "Authentication required"
+        case .serverError(let message):
+            return "Server error: \(message)"
+        case .unknownError(let error):
+            return "Unknown error: \(error.localizedDescription)"
+        }
+    }
+}
+
+/// Base structure for API endpoint configuration
+struct NetworkService {
+    static let api: String = "https://pet-reunion-api.example.com"
+}
+
+/// Main service provider for network operations
+class NetworkServiceProvider {
+    
+    // MARK: - Properties
+    
+    let api: String = NetworkService.api
+    private let sessionTimeout: TimeInterval = 30.0
+    
+    // MARK: - Authentication Methods
+    
+    /// Login to the application
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - password: User's password
+    ///   - completion: Callback with result containing token or error
+    func login(email: String, password: String, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let url = URL(string: "\(api)/api/v1/auth/login") else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.invalidURL))
+            }
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = sessionTimeout
+        
+        let body: [String: Any] = [
+            "email": email,
+            "password": password
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.unknownError(NSError(domain: "JSONSerializationError", code: 0, userInfo: nil))))
+            }
+            return
+        }
+        
+        request.httpBody = jsonData
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.handleNetworkError(error, completion: completion)
+                return
+            }
+            
+            if !self.handleHTTPResponse(response: response, completion: completion) {
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            if let jsonString = String(data: data, encoding: .utf8) {
+                DispatchQueue.main.async {
+                    completion(.success(jsonString))
+                }
+            } else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingFailed(NSError(domain: "InvalidResponse", code: 0, userInfo: nil))))
+                }
+            }
+        }
+        
+        task.resume()
+    }
+    
+    /// Register a new user
+    /// - Parameters:
+    ///   - fullName: User's full name
+    ///   - email: User's email address
+    ///   - phone: User's phone number
+    ///   - password: User's password
+    ///   - completion: Callback with registration result
+    func register(fullName: String, email: String, phone: String, password: String, completion: @escaping (Result<String, Error>) -> Void) {
+        guard let url = URL(string: "\(api)/api/v1/auth/register") else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.invalidURL))
+            }
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = sessionTimeout
+        
+        let body: [String: Any] = [
+            "email": email,
+            "full_name": fullName,
+            "phone": phone,
+            "password": password
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: body) else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.unknownError(NSError(domain: "JSONSerializationError", code: 0, userInfo: nil))))
+            }
+            return
+        }
+        
+        request.httpBody = jsonData
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            if let error = error {
+                self.handleNetworkError(error, completion: completion)
+                return
+            }
+            
+            if !self.handleHTTPResponse(response: response, completion: completion) {
+                return
+            }
+            
+            guard let data = data else {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.noData))
+                }
+                return
+            }
+            
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let message = json["message"] as? String {
+                    DispatchQueue.main.async {
+                        completion(.success(message))
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(.success("Registration successful"))
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(NetworkError.decodingFailed(error)))
+                }
+            }
+        }
+        
+        task.resume()
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Get authentication token from UserDefaults
+    private func getToken() -> String? {
+        return UserDefaults.standard.string(forKey: "TokenIdentifier")
+    }
+    
+    /// Create an authorized HTTP request
+    private func createAuthorizedRequest(url: URL, method: String) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = sessionTimeout
+        
+        if let token = getToken() {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        return request
+    }
+    
+    /// Handle network errors
+    private func handleNetworkError<T>(_ error: Error, completion: @escaping (Result<T, Error>) -> Void) {
+        DispatchQueue.main.async {
+            if (error as NSError).domain == NSURLErrorDomain {
+                switch (error as NSError).code {
+                case NSURLErrorNotConnectedToInternet:
+                    completion(.failure(NetworkError.networkUnavailable))
+                case NSURLErrorTimedOut:
+                    completion(.failure(NetworkError.requestFailed(statusCode: -1)))
+                default:
+                    completion(.failure(NetworkError.unknownError(error)))
+                }
+            } else {
+                completion(.failure(NetworkError.unknownError(error)))
+            }
+        }
+    }
+    
+    /// Handle HTTP response and check status code
+    private func handleHTTPResponse<T>(response: URLResponse?, statusCode: Int? = nil, completion: @escaping (Result<T, Error>) -> Void) -> Bool {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.requestFailed(statusCode: 0)))
+            }
+            return false
+        }
+        
+        let code = statusCode ?? httpResponse.statusCode
+        
+        switch code {
+        case 200...299:
+            return true
+        case 401:
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.authenticationRequired))
+            }
+            return false
+        case 400...499:
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.requestFailed(statusCode: code)))
+            }
+            return false
+        case 500...599:
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.serverError("Server error \(code)")))
+            }
+            return false
+        default:
+            DispatchQueue.main.async {
+                completion(.failure(NetworkError.requestFailed(statusCode: code)))
+            }
+            return false
+        }
+    }
+}
+src/Modules/Chat/ChatPresenter.swift (Sample)
+swiftimport Foundation
+
+protocol ChatViewProtocol: AnyObject {
+    func setMessages(_ messages: [ChatMessage])
+    func addMessage(_ message: ChatMessage)
+    func showTypingIndicator(_ isTyping: Bool)
+    func updateUserStatus(_ userId: Int, isOnline: Bool, lastActiveAt: Date?)
+    func markMessageAsRead(_ messageId: Int)
+    func updateChatInfo(_ chat: Chat)
+    func showLoading()
+    func hideLoading()
+    func showError(message: String)
+}
+
+class ChatPresenter {
+    
+    weak var view: ChatViewProtocol?
+    private let provider = NetworkServiceProvider()
+    private let chatId: Int
+    private var webSocketTask: URLSessionWebSocketTask?
+    private var isConnected = false
+    private var isConnecting = false
+    private var reconnectTimer: Timer?
+    private let reconnectInterval: TimeInterval = 5.0
+    
+    // Property to store pending messages
+    private var pendingMessages: [String] = []
+    
+    // Flag to track WebSocket activity
+    private var isWebSocketActive = false
+    
+    init(chatId: Int) {
+        self.chatId = chatId
+    }
+    
+    deinit {
+        disconnectFromWebSocket()
+        reconnectTimer?.invalidate()
+    }
+    
+    // MARK: - Public Methods
+    
+    /// Fetch chat details from API
+    func fetchChatDetails() {
+        view?.showLoading()
+        
+        provider.getChat(chatId: chatId) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.view?.hideLoading()
+                
+                switch result {
+                case .success(let chat):
+                    self.view?.updateChatInfo(chat)
+                case .failure(let error):
+                    self.view?.showError(message: error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    /// Fetch chat messages from API
+    func fetchMessages() {
+        view?.showLoading()
+        
+        provider.getChatMessages(chatId: chatId) { [weak self] result in
+            guard let self = self else { return }
+            
+            DispatchQueue.main.async {
+                self.view?.hideLoading()
+                
+                switch result {
+                case .success(let messages):
+                    self.view?.setMessages(messages)
+                case .failure(let error):
+                    self.view?.showError(message: error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    /// Send a new message
+    func sendMessage(content: String) {
+        // Create temporary message for immediate UI display
+        let currentUserId = UserDefaults.standard.integer(forKey: "current_user_id")
+        let currentTime = ISO8601DateFormatter().string(from: Date())
+        
+        let tempMessage = ChatMessage(
+            id: Int.random(in: -10000..<0), // Temporary negative ID to prevent conflicts
+            content: content,
+            chat_id: chatId,
+            sender_id: currentUserId,
+            whoid: currentUserId,
+            is_read: false,
+            created_at: currentTime
+        )
+        
+        // Add message to UI immediately
+        DispatchQueue.main.async {
+            self.view?.addMessage(tempMessage)
+        }
+        
+        // Send message via WebSocket
+        let messageData: [String: Any] = [
+            "message_type": "text",
+            "content": content
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: messageData),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return
+        }
+        
+        sendWebSocketMessage(jsonString)
+    }
+    
+    // MARK: - WebSocket Methods
+    
+    /// Connect to WebSocket for real-time messaging
+    func connectToWebSocket() {
+        // Prevent multiple connection attempts
+        guard !isConnected && !isConnecting else { return }
+        
+        isConnecting = true
+        let apiUrl = NetworkService.api
+        
+        guard let token = UserDefaults.standard.string(forKey: "TokenIdentifier") else {
+            DispatchQueue.main.async {
+                self.isConnecting = false
+                self.view?.showError(message: "Authentication required. Please log in again.")
+            }
+            return
+        }
+        
+        let wsBaseUrl: String
+        if apiUrl.hasPrefix("https://") {
+            wsBaseUrl = "wss://" + apiUrl.dropFirst("https://".count)
+        } else if apiUrl.hasPrefix("http://") {
+            wsBaseUrl = "ws://" + apiUrl.dropFirst("http://".count)
+        } else {
+            wsBaseUrl = apiUrl
+        }
+        
+        let websocketEndpoint = "/api/v1/ws/\(chatId)?token=\(token)"
+        
+        guard let url = URL(string: "\(wsBaseUrl)\(websocketEndpoint)") else {
+            DispatchQueue.main.async {
+                self.isConnecting = false
+                self.view?.showError(message: "Invalid WebSocket URL")
+            }
+            return
+        }
+        
+        print("Connecting to WebSocket URL: \(url.absoluteString)")
+        
+        // Create session with extended settings
+        let session = URLSession(configuration: .default)
+        webSocketTask = session.webSocketTask(with: url)
+        
+        webSocketTask?.resume()
+        
+        isConnected = true
+        isConnecting = false
+        isWebSocketActive = true
+        
+        // Start receiving messages
+        receiveMessage()
+        
+        // Send any pending messages
+        let messagesToSend = pendingMessages
+        pendingMessages = []
+        
+        for pendingMessage in messagesToSend {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.sendWebSocketMessage(pendingMessage)
+            }
+        }
+        
+        // Start ping to maintain connection
+        startPinging()
+    }
+    
+    /// Disconnect from WebSocket
+    func disconnectFromWebSocket() {
+        guard isConnected, let task = webSocketTask else { return }
+        
+        isWebSocketActive = false
+        task.cancel(with: .normalClosure, reason: nil)
+        webSocketTask = nil
+        isConnected = false
+        
+        reconnectTimer?.invalidate()
+        reconnectTimer = nil
+    }
+    
+    /// Send typing status over WebSocket
+    func sendTypingEvent(isTyping: Bool) {
+        let messageType = isTyping ? "typing_started" : "typing_ended"
+        let messageDict = ["message_type": messageType]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: messageDict),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return
+        }
+        
+        sendWebSocketMessage(jsonString)
+    }
+    
+    /// Mark message as read over WebSocket
+    func markMessageAsRead(messageId: Int) {
+        let messageDict: [String: Any] = [
+            "message_type": "message_read",
+            "message_id": messageId
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: messageDict),
+              let jsonString = String(data: jsonData, encoding: .utf8) else {
+            return
+        }
+        
+        sendWebSocketMessage(jsonString)
+    }
+    
+    // MARK: - Private WebSocket Methods
+    
+    /// Periodically send ping to keep connection alive
+    private func startPinging() {
+        DispatchQueue.global().asyncAfter(deadline: .now() + 30) { [weak self] in
+            guard let self = self, self.isConnected, self.isWebSocketActive else { return }
+            
+            self.webSocketTask?.sendPing { error in
+                if let error = error {
+                    print("WebSocket ping failed: \(error.localizedDescription)")
+                    DispatchQueue.main.async {
+                        self.isConnected = false
+                        self.scheduleReconnect()
+                    }
+                } else {
+                    // Ping successful, continue pinging
+                    self.startPinging()
+                }
+            }
+        }
+    }
+    
+    /// Schedule reconnection attempt
+    private func scheduleReconnect() {
+        reconnectTimer?.invalidate()
+        reconnectTimer = Timer.scheduledTimer(withTimeInterval: reconnectInterval, repeats: false) { [weak self] _ in
+            self?.connectToWebSocket()
+        }
+    }
+    
+    /// Receive messages from WebSocket
+    private func receiveMessage() {
+        guard isConnected, let task = webSocketTask, isWebSocketActive else {
+            // If socket is not active, don't try to receive messages
+            return
+        }
+        
+        print("Waiting for WebSocket messages...")
+        
+        // Request to receive message
+        task.receive { [weak self] result in
+            guard let self = self, self.isWebSocketActive else { return }
+            
+            switch result {
+            case .success(let message):
+                // Process received message
+                switch message {
+                case .string(let text):
+                    print("Received WebSocket message: \(text)")
+                    self.handleWebSocketMessage(text)
+                case .data(let data):
+                    if let text = String(data: data, encoding: .utf8) {
+                        print("Received WebSocket data message: \(text)")
+                        self.handleWebSocketMessage(text)
+                    }
+                @unknown default:
+                    break
+                }
+                
+                // Immediately request next message
+                self.receiveMessage()
+                
+            case .failure(let error):
+                print("WebSocket error: \(error.localizedDescription)")
+                
+                // Handle WebSocket error
+                DispatchQueue.main.async {
+                    if self.isConnected {
+                        self.isConnected = false
+                        
+                        // Only notify user for critical errors
+                        if (error as NSError).code != URLError.cancelled.rawValue {
+                            self.view?.showError(message: "Connection to chat interrupted. Reconnecting...")
+                            self.scheduleReconnect()
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Send message via WebSocket
+    private func sendWebSocketMessage(_ text: String) {
+        guard isConnected, let task = webSocketTask, isWebSocketActive else {
+            // If not connected, add message to queue and connect
+            pendingMessages.append(text)
+            
+            // Try to connect if not already connecting
+            if !isConnecting {
+                connectToWebSocket()
+            }
+            return
+        }
+        
+        let message = URLSessionWebSocketTask.Message.string(text)
+        task.send(message) { [weak self] error in
+            if let error = error {
+                print("Failed to send WebSocket message: \(error)")
+                DispatchQueue.main.async {
+                    if let self = self, self.isConnected {
+                        self.isConnected = false
+                        self.pendingMessages.append(text) // Save message for resending
+                        self.scheduleReconnect()
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Process WebSocket message
+    private func handleWebSocketMessage(_ text: String) {
+        guard let data = text.data(using: .utf8) else { return }
+        
+        do {
+            print("Processing WebSocket message: \(text)")
+            
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                
+                // Check if this is a chat message
+                if let content = json["content"] as? String,
+                   let messageId = (json["message_id"] as? Int) ?? (json["id"] as? Int),
+                   let chatId = json["chat_id"] as? Int,
+                   let senderId = json["sender_id"] as? Int,
+                   let whoid = json["whoid"] as? Int,
+                   let createdAt = json["created_at"] as? String {
+                    
+                    let isRead = (json["is_read"] as? Bool) ?? false
+                    
+                    print("Parsed message: id=\(messageId), content=\(content), sender=\(senderId)")
+                    
+                    let message = ChatMessage(
+                        id: messageId,
+                        content: content,
+                        chat_id: chatId,
+                        sender_id: senderId,
+                        whoid: whoid,
+                        is_read: isRead,
+                        created_at: createdAt
+                    )
+                    
+                    // Always send message to main thread for UI update
+                    DispatchQueue.main.async {
+                        print("Sending message to UI: \(message.id) - \(message.content)")
+                        self.view?.addMessage(message)
+                    }
+                    return
+                }
+                
+                // Handle typing status
+                if let statusType = json["status_type"] as? String,
+                   let userId = json["user_id"] as? Int {
+                    
+                    switch statusType {
+                    case "typing_started":
+                        DispatchQueue.main.async {
+                            self.view?.showTypingIndicator(true)
+                        }
+                    case "typing_ended":
+                        DispatchQueue.main.async {
+                            self.view?.showTypingIndicator(false)
+                        }
+                    case "message_read":
+                        if let messageId = json["message_id"] as? Int {
+                            DispatchQueue.main.async {
+                                self.view?.markMessageAsRead(messageId)
+                            }
+                        }
+                    case "user_online", "user_offline":
+                        let isOnline = statusType == "user_online"
+                        let lastActiveStr = json["last_active_at"] as? String
+                        let lastActive: Date?
+                        
+                        if let lastActiveStr = lastActiveStr {
+                            let dateFormatter = DateFormatter()
+                            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+                            lastActive = dateFormatter.date(from: lastActiveStr)
+                        } else {
+                            lastActive = nil
+                        }
+                        
+                        DispatchQueue.main.async {
+                            self.view?.updateUserStatus(userId, isOnline: isOnline, lastActiveAt: lastActive)
+                        }
+                    default:
+                        break
+                    }
+                    return
+                }
+            }
+        } catch {
+            print("Failed to parse WebSocket message: \(error)")
+        }
+    }
+}
+src/Modules/FindPet/FindPetViewController.swift (Sample)
+swiftimport UIKit
+import SnapKit
+import PhotosUI
+import CoreLocation
+
+protocol IFindPetView: AnyObject {
+    func showLoading()
+    func hideLoading()
+    func navigateToSearchResults(response: PetSearchResponse)
+    func showError(message: String)
+    func showSuccess(message: String)
+}
+
+class FindPetViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate, IFindPetView, CLLocationManagerDelegate {
+    
+    // MARK: - Properties
+    
+    private var selectedImages: [UIImage] = []
+    private let presenter = FindPetSearchPresenter()
+    private let locationManager = CLLocationManager()
+    private var currentLocation: CLLocationCoordinate2D?
+    
+    // Completion handlers
+    private var locationPermissionCompletion: ((Bool) -> Void)?
+    private var locationCompletionHandler: ((CLLocationCoordinate2D?) -> Void)?
+    
+    // MARK: - UI Components
+    
+    private let photoCollectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.itemSize = CGSize(width: 100, height: 100)
+        layout.minimumLineSpacing = 10
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
+        collectionView.showsHorizontalScrollIndicator = false
+        collectionView.register(SearchPhotoCell.self, forCellWithReuseIdentifier: "SearchPhotoCell")
+        return collectionView
+    }()
+    
+    private let uploadPhotoButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Upload Photo", for: .normal)
+        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+        button.backgroundColor = .systemGray4
+        button.setTitleColor(.white, for: .normal)
+        button.layer.cornerRadius = 12
+        return button
+    }()
+    
+    private let speciesTextField = UITextField()
+    private let colorTextField = UITextField()
+    private let genderTextField = UITextField()
+    private let breedTextField = UITextField()
+    
+    private let searchButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Search Pet", for: .normal)
+        button.titleLabel?.font = UIFont.boldSystemFont(ofSize: 18)
+        button.backgroundColor = .systemGreen
+        button.setTitleColor(.white, for: .normal)
+        button.layer.cornerRadius = 12
+        return button
+    }()
+    
+    private let activityIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .large)
+        indicator.hidesWhenStopped = true
+        indicator.color = .systemGreen
+        return indicator
+    }()
+    
+    // MARK: - Lifecycle Methods
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupViews()
+        setupActions()
+        setupCollectionView()
+        configurePresenter()
+        hideKeyboardWhenTappedAround()
+        setupLocationManager()
+    }
+    
+    // MARK: - Setup Methods
+    
+    private func configurePresenter() {
+        presenter.view = self
+    }
+    
+    private func setupViews() {
+        view.backgroundColor = .systemBackground
+        title = "Find a Pet"
+        
+        // Configure text fields
+        speciesTextField.placeholder = "Species (Dog, Cat) *"
+        speciesTextField.borderStyle = .roundedRect
+        
+        colorTextField.placeholder = "Color *"
+        colorTextField.borderStyle = .roundedRect
+        
+        genderTextField.placeholder = "Gender (optional)"
+        genderTextField.borderStyle = .roundedRect
+        
+        breedTextField.placeholder = "Breed (optional)"
+        breedTextField.borderStyle = .roundedRect
+        
+        // Add subviews
+        view.addSubview(uploadPhotoButton)
+        view.addSubview(photoCollectionView)
+        view.addSubview(speciesTextField)
+        view.addSubview(colorTextField)
+        view.addSubview(genderTextField)
+        view.addSubview(breedTextField)
+        view.addSubview(searchButton)
+        view.addSubview(activityIndicator)
+        
+        // Set constraints
+        uploadPhotoButton.snp.makeConstraints { make in
+            make.top.equalTo(view.safeAreaLayoutGuide).offset(20)
+            make.leading.equalToSuperview().inset(20)
+            make.width.equalTo(100)
+            make.height.equalTo(100)
+        }
+        
+        photoCollectionView.snp.makeConstraints { make in
+            make.top.equalTo(uploadPhotoButton)
+            make.leading.equalTo(uploadPhotoButton.snp.trailing).offset(10)
+            make.trailing.equalToSuperview().inset(20)
+            make.height.equalTo(100)
+        }
+        
+        speciesTextField.snp.makeConstraints { make in
+            make.top.equalTo(uploadPhotoButton.snp.bottom).offset(20)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.height.equalTo(50)
+        }
+        
+        colorTextField.snp.makeConstraints { make in
+            make.top.equalTo(speciesTextField.snp.bottom).offset(10)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.height.equalTo(50)
+        }
+        
+        genderTextField.snp.makeConstraints { make in
+            make.top.equalTo(colorTextField.snp.bottom).offset(10)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.height.equalTo(50)
+        }
+        
+        breedTextField.snp.makeConstraints { make in
+            make.top.equalTo(genderTextField.snp.bottom).offset(10)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.height.equalTo(50)
+        }
+        
+        searchButton.snp.makeConstraints { make in
+            make.bottom.equalTo(view.safeAreaLayoutGuide).offset(-20)
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.height.equalTo(50)
+        }
+        
+        activityIndicator.snp.makeConstraints { make in
+            make.center.equalToSuperview()
+        }
+    }
+    
+    private func setupActions() {
+        uploadPhotoButton.addTarget(self, action: #selector(uploadPhotoTapped), for: .touchUpInside)
+        searchButton.addTarget(self, action: #selector(searchPetTapped), for: .touchUpInside)
+    }
+    
+    private func setupCollectionView() {
+        photoCollectionView.delegate = self
+        photoCollectionView.dataSource = self
+    }
+    
+    private func setupLocationManager() {
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+    }
+    
+    private func hideKeyboardWhenTappedAround() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
+    }
+    
+    @objc private func dismissKeyboard() {
+        view.endEditing(true)
+    }
+    
+    // MARK: - Location Methods
+    
+    private func requestLocationPermissionIfNeeded(completion: @escaping (Bool) -> Void) {
+        let authStatus = CLLocationManager.authorizationStatus()
+        
+        switch authStatus {
+        case .notDetermined:
+            locationPermissionCompletion = completion
+            locationManager.requestWhenInUseAuthorization()
+        case .restricted, .denied:
+            completion(false)
+        case .authorizedWhenInUse, .authorizedAlways:
+            completion(true)
+        @unknown default:
+            completion(false)
+        }
+    }
+    
+    private func getLocation(completion: @escaping (CLLocationCoordinate2D?) -> Void) {
+        locationCompletionHandler = completion
+        currentLocation = nil
+        
+        // Set timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) { [weak self] in
+            if self?.currentLocation == nil {
+                self?.locationCompletionHandler?(nil)
+                self?.locationCompletionHandler = nil
+                self?.locationManager.stopUpdatingLocation()
+            }
+        }
+        
+        locationManager.startUpdatingLocation()
+    }
+    
+    // MARK: - Actions
+    
+    @objc private func uploadPhotoTapped() {
+        let imagePickerController = UIImagePickerController()
+        imagePickerController.delegate = self
+        imagePickerController.sourceType = .photoLibrary
+        present(imagePickerController, animated: true)
+    }
+    
+    @objc private func searchPetTapped() {
+        guard let species = speciesTextField.text, !species.isEmpty,
+              let color = colorTextField.text, !color.isEmpty,
+              !selectedImages.isEmpty else {
+            showError(message: "Please upload a photo and fill in the required fields (Species and Color).")
+            return
+        }
+        
+        let gender = genderTextField.text?.isEmpty == true ? nil : genderTextField.text
+        let breed = breedTextField.text?.isEmpty == true ? nil : breedTextField.text
+        
+        // Ask user if they want to add found pet to database
+        let alert = UIAlertController(
+            title: "Add Found Pet",
+            message: "Would you like to add this pet to the list of found pets?",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Yes", style: .default) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // Request location permission
+            self.requestLocationPermissionIfNeeded { hasPermission in
+                if hasPermission {
+                    // Show loading indicator
+                    DispatchQueue.main.async {
+                        self.view.isUserInteractionEnabled = false
+                        self.activityIndicator.startAnimating()
+                    }
+                    
+                    // Get current location
+                    self.getLocation { coordinates in
+                        DispatchQueue.main.async {
+                            self.view.isUserInteractionEnabled = true
+                            self.activityIndicator.stopAnimating()
+                            
+                            // Perform search with save
+                            self.presenter.searchPet(
+                                photo: self.selectedImages.first!,
+                                species: species.lowercased(),
+                                color: color,
+                                gender: gender,
+                                breed: breed,
+                                coordX: coordinates?.latitude,
+                                coordY: coordinates?.longitude,
+                                save: true
+                            )
+                        }
+                    }
+                } else {
+                    // If no location permission, search without location
+                    self.presenter.searchPet(
+                        photo: self.selectedImages.first!,
+                        species: species.lowercased(),
+                        color: color,
+                        gender: gender,
+                        breed: breed,
+                        coordX: nil,
+                        coordY: nil,
+                        save: true
+                    )
+                }
+            }
+        })
+        
+        alert.addAction(UIAlertAction(title: "No", style: .cancel) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // Perform search without save
+            self.presenter.searchPet(
+                photo: self.selectedImages.first!,
+                species: species.lowercased(),
+                color: color,
+                gender: gender,
+                breed: breed,
+                coordX: nil,
+                coordY: nil,
+                save: false
+            )
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    // MARK: - IFindPetView Implementation
+    
+    func showLoading() {
+        DispatchQueue.main.async {
+            self.activityIndicator.startAnimating()
+            self.searchButton.isEnabled = false
+        }
+    }
+    
+    func hideLoading() {
+        DispatchQueue.main.async {
+            self.activityIndicator.stopAnimating()
+            self.searchButton.isEnabled = true
+        }
+    }
+    
+    func navigateToSearchResults(response: PetSearchResponse) {
+        DispatchQueue.main.async {
+            let resultsVC = FoundPetViewController(searchResponse: response)
+            self.navigationController?.pushViewController(resultsVC, animated: true)
+        }
+        // Reset form
+        selectedImages = []
+        speciesTextField.text = ""
+        colorTextField.text = ""
+        genderTextField.text = ""
+        breedTextField.text = ""
+        photoCollectionView.reloadData()
+    }
+    
+    func showError(message: String) {
+        DispatchQueue.main.async {
+            let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            self.present(alert, animated: true)
+        }
+    }
+    
+    func showSuccess(message: String) {
+        // Handle success if needed
+    }
+    
+    // MARK: - CLLocationManagerDelegate
+    
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        switch status {
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationPermissionCompletion?(true)
+        case .denied, .restricted:
+            locationPermissionCompletion?(false)
+        case .notDetermined:
+            break
+        @unknown default:
+            locationPermissionCompletion?(false)
+        }
+        
+        locationPermissionCompletion = nil
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let location = locations.last {
+            currentLocation = location.coordinate
+            locationCompletionHandler?(currentLocation)
+            locationCompletionHandler = nil
+            locationManager.stopUpdatingLocation()
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        print("Failed to get location: \(error.localizedDescription)")
+        locationCompletionHandler?(nil)
+        locationCompletionHandler = nil
+        locationManager.stopUpdatingLocation()
+    }
+    
+    // MARK: - UIImagePickerControllerDelegate
+    
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        if let selectedImage = info[.originalImage] as? UIImage {
+            selectedImages = [selectedImage]
+            photoCollectionView.reloadData()
+        }
+        dismiss(animated: true)
+    }
+}
+
+// MARK: - UICollectionView DataSource & Delegate
+
+extension FindPetViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return selectedImages.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "SearchPhotoCell", for: indexPath) as! SearchPhotoCell
+        cell.configure(with: selectedImages[indexPath.item])
+        return cell
+    }
+}
+
+// MARK: - Photo Cell
+
+class SearchPhotoCell: UICollectionViewCell {
+    private let imageView = UIImageView()
+    
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 8
+        
+        contentView.addSubview(imageView)
+        imageView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func configure(with image: UIImage) {
+        imageView.image = image
+    }
+}
